@@ -49,6 +49,7 @@ Current limitations
   * Splitted transactions are not tested/supported (because I do not use them :-) )
   * Budget, locations should work well, but not tested
   * Conflict of editing the same entity by different persons is not resolved technically. It should be resolved by agreement between persons.
+  * I had to exclude test data from publishing, because it is my real financial data. All tests are commented.
 
 Support
 =======
