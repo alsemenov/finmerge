@@ -7,6 +7,8 @@
 */
 package ru.xibodoh.finmerge.financisto;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -107,7 +109,7 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 		
 		if (key.endsWith("_id") && !"_id".equals(key)){
 			return entityManager.getById(getValueType(key), value);			
-		}		
+		}
 		return value;
 	}
 
@@ -150,4 +152,28 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 		referenceCounter = value;
 	}
 
+	@Override
+	public String toString() {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+		StringBuilder sb = new StringBuilder("{");
+		for(String key: keySet()){
+			sb.append(key).append('=');
+			Object value = getValue(key);
+			String title;
+			if ((value instanceof Entity) && (title = ((Entity) value).get("title"))!=null){
+				value = title;				
+			} else if ("datetime".equals(key) && value!=null && !"0".equals(value)){				 
+				value = sdf.format(new Date(Long.parseLong((String) value)));
+			} else {
+				value = get(key);
+			}
+			sb.append(value);
+			sb.append(", ");
+		}
+		int len = sb.length();
+		sb.delete(len-2, len);
+		sb.append("}");
+		return sb.toString();
+	}
+	
 }
