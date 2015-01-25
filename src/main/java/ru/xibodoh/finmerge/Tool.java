@@ -9,14 +9,20 @@ package ru.xibodoh.finmerge;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.xml.sax.SAXException;
+
+import ru.xibodoh.finmerge.abilitycash.AbilityCashXMLFile;
 import ru.xibodoh.finmerge.financisto.BackupFile;
-import ru.xibodoh.finmerge.financisto.Entity;
 
 public class Tool {
 	private static final Logger logger = Logger.getLogger(App.class.getName());
@@ -89,9 +95,11 @@ public class Tool {
     	
     	List<File> outputFolders = new ArrayList<File>();
     	if (outputName!=null) {
-    		outputFolders.add(new File(outputName).getParentFile());
+    		File f = new File(outputName);
+			outputFolders.add(f.getParentFile());
+			outputName = f.getName();
     	}
-    	BackupFile result = null;
+    	EntityManager result = null;
     	String minInputName = null;
     	for (File file: inputFiles){
     		if (file.isDirectory()){
@@ -106,51 +114,53 @@ public class Tool {
     				minInputName = file.getName();
     			}
     			try {
-					BackupFile backupFile = new BackupFile(file);
+    				EntityManager entityManager = createEntityManager(file);
 					logger.log(Level.INFO, "Loaded file {0}", file.getAbsolutePath());
 					
 					if ("print".equals(command)){
-						print(backupFile);
+						print(entityManager);
 					} else if ("added".equals(command)){
-						print(backupFile.added());
+						print(entityManager.added());
 					} else if ("deleted".equals(command)){
-						print(backupFile.deleted());
+						print(entityManager.deleted());
 					} else if (command.startsWith("comm")) {
 						if (result==null){
-							result = backupFile;
+							result = entityManager;
 						} else {
 							if (command.indexOf('1')>=0){
-								print(result.unique(backupFile));
+								print(result.unique(entityManager));
 							}
 							if (command.indexOf('2')>=0){
-								print(result.common(backupFile));
+								print(result.common(entityManager));
 							}
 							if (command.indexOf('3')>=0){
-								print(backupFile.unique(result));
+								print(entityManager.unique(result));
 							}
 							result = null;
 						}
 					} else if ("equal".equals(command)){
 						if (result==null){
-							result = backupFile;
+							result = entityManager;
 						} else {
-							System.out.println(result.unique(backupFile).isEmpty() && backupFile.unique(result).isEmpty());
+							System.out.println(result.unique(entityManager).isEmpty() && entityManager.unique(result).isEmpty());
 							result = null;
 						}
 					} else if ("metadata".equals(command)){
-						System.out.println("package name: "+backupFile.getPackageName());
-						System.out.println("version name: "+backupFile.getVersionName());
-						System.out.println("version code: "+backupFile.getVersionCode());
-						System.out.println("database versions: "+backupFile.getDatabaseVersion());
-						System.out.println("file name: "+backupFile.getMetaData().getFileName());
-						System.out.println("parents: "+Arrays.toString(backupFile.getMetaData().getParents()));
+						MetaData metaData = entityManager.getMetaData();
+						System.out.println("file name: "+metaData.getFileName());
+						System.out.println("parents: "+Arrays.toString(metaData.getParents()));
+						Iterator<String> keys = metaData.keys();
+						while (keys.hasNext()){
+							String key = keys.next();
+							System.out.println(key+": "+metaData.get(key));
+						}
 					} else if ("log".equals(command)){
-						printLog(backupFile, "", true);
+						printLog(entityManager, "", true);
 					} else if ("merge".equals(command)){					
 						if (result==null){
-							result = backupFile;
+							result = entityManager;
 						} else {
-							result.merge(backupFile);
+							result.merge(entityManager);
 						}
 					}
 				} catch (Exception e) {
@@ -189,16 +199,18 @@ public class Tool {
 		}
 	}
 	
-	private static void printLog(BackupFile backupFile, String prefix, boolean isTail) {
-		System.out.println(prefix + (isTail ? "└── " : "├── ") + backupFile.getMetaData().getFileName());
-		String[] parents = backupFile.getMetaData().getParents();
-		for (int i = 0; i < parents.length; i++) {
-			try {
-				// TODO find file in input folders
-				BackupFile parent = new BackupFile(new File(parents[i]));
-				printLog(parent, prefix + (isTail ? "    " : "│   "), i==parents.length-1);
-			} catch (Exception e){
-				System.out.println(prefix + (isTail ? "    " : "│   ")+(i==parents.length-1 ? "└── " : "├── ") + parents[i] + " (failed to read)");
+	private static void printLog(EntityManager entityManager, String prefix, boolean isTail) {
+		System.out.println(prefix + (isTail ? "└── " : "├── ") + entityManager.getMetaData().getFileName());
+		String[] parents = entityManager.getMetaData().getParents();
+		if (parents!=null) {
+			for (int i = 0; i < parents.length; i++) {
+				try {
+					// TODO find file in input folders
+					EntityManager parent = createEntityManager(new File(parents[i]));
+					printLog(parent, prefix + (isTail ? "    " : "│   "), i==parents.length-1);
+				} catch (Exception e){
+					System.out.println(prefix + (isTail ? "    " : "│   ")+(i==parents.length-1 ? "└── " : "├── ") + parents[i] + " (failed to read)");
+				}
 			}
 		}
 	}
@@ -242,6 +254,16 @@ public class Tool {
 			c = name.charAt(i);
 		}
 		return c==".backup".charAt(i-19);
+	}
+	
+	private static EntityManager createEntityManager(File file) throws IndexOutOfBoundsException, IOException, ParserConfigurationException, SAXException{
+		String name = file.getName().toLowerCase();
+		if (name.endsWith("backup")){
+			return new BackupFile(file);
+		} else if (name.endsWith(".xml")){
+			return new AbilityCashXMLFile(file);
+		}
+		throw new RuntimeException("Unsupported file type: "+file.getAbsolutePath());
 	}
 	
 	private static File findMostRecentBackupFile(File file) {

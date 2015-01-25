@@ -7,8 +7,8 @@
 */
 package ru.xibodoh.finmerge.financisto;
 
-import static ru.xibodoh.finmerge.financisto.Entity.TYPE_CATEGORY;
-import static ru.xibodoh.finmerge.financisto.Entity.TYPE_TRANSACTIONS;
+import static ru.xibodoh.finmerge.Entity.TYPE_CATEGORY;
+import static ru.xibodoh.finmerge.Entity.TYPE_TRANSACTIONS;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -30,6 +30,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.GZIPOutputStream;
 
+import ru.xibodoh.finmerge.Entity;
+import ru.xibodoh.finmerge.EntityManager;
+
 public class BackupFile implements EntityManager, Iterable<Entity>{
 	
 	private static final String FINMERGE_FILE_ATTRIBUTE = "finmerge_file";
@@ -43,16 +46,18 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	private final static int MIN_DATABASE_VERSION = 197;
 	private final static int MAX_DATABASE_VERSION = 204;
 	
-	public static class MetaData {
+	public static class MetaData implements ru.xibodoh.finmerge.MetaData {
 		private String fileName;
 		private String[] parents;
+		private Map<String, Object> data;
 		
 		public MetaData() {
-			
+			data = new HashMap<>();
 		}
 		
-		public MetaData(Entity entity){
-			this.fileName = entity.get("default_value");			
+		public MetaData(Entity entity, Map<String, Object> data){
+			this.fileName = entity.get("default_value");
+			this.data = data;
 			String list = entity.get("list_values");
 			if (list!=null){
 				this.parents = list.split(";");
@@ -83,7 +88,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 			return fileName;
 		}
 
-		private void setFileName(String fileName) {
+		public void setFileName(String fileName) {
 			this.fileName = fileName;
 		}
 
@@ -91,8 +96,16 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 			return parents;
 		}
 
-		private void setParents(String[] parents) {
+		public void setParents(String[] parents) {
 			this.parents = parents;
+		}
+		
+		public Iterator<String> keys() {
+			return data.keySet().iterator();
+		}
+		
+		public Object get(String key){
+			return data.get(key);
 		}
 	}
 	
@@ -116,6 +129,11 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	public BackupFile(File file) throws IndexOutOfBoundsException, IOException {
 		this.file = file;
 		load(file);
+	}
+	
+	@Override
+	public File getFile() {
+		return file;
 	}
 	
 	private CategoryEntity createRootCategory(){
@@ -175,7 +193,12 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 			String type = entity.getType();
 
 			if (Entity.TYPE_ATTRIBUTES.equals(type) && FINMERGE_FILE_ATTRIBUTE.equals(entity.get("name"))){
-				metadata = new MetaData(entity);
+				HashMap<String, Object> data = new HashMap<>();
+				data.put("package name", packageName);
+				data.put("version name", versionName);
+				data.put("version code", versionCode);
+				data.put("database version", databaseVersion);
+				metadata = new MetaData(entity, data);
 				continue; // avoid further processing of metadata
 			}
 			
@@ -306,9 +329,17 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		return k.toString();
 	}
 	
-	public void merge(BackupFile backupFile) {
+	@Override
+	public void merge(EntityManager backupFile) {
 		// TODO move versions to interface
-		checkVersion(backupFile.packageName, backupFile.versionCode, backupFile.versionName, backupFile.databaseVersion);
+		if (backupFile instanceof BackupFile){
+			checkVersion(
+					((BackupFile)backupFile).packageName, 
+					((BackupFile)backupFile).versionCode, 
+					((BackupFile)backupFile).versionName, 
+					((BackupFile)backupFile).databaseVersion
+			);
+		}
 		
 		Set<String> thisDeleted = new HashSet<String>();
 		for (Entity entity: this.deleted()){
@@ -357,7 +388,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 			logger.log(Level.WARNING, "Error while detecting deleted entities ", e);
 		}
 		
-		metadata.setParents(new String[]{file.getName(), backupFile.file.getName()});
+		metadata.setParents(new String[]{file.getName(), backupFile.getFile().getName()});
 	}
 	
 	/** 
@@ -365,7 +396,8 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	 * @param backupFile
 	 * @return
 	 */
-	public List<Entity> unique(BackupFile backupFile){
+	@Override
+	public List<Entity> unique(EntityManager backupFile){
 		ArrayList<Entity> result = new ArrayList<Entity>();
 		for (Entity entity: this){
 			if (backupFile.getByFingerPrint(entity.getFingerPrint())==null){
@@ -379,7 +411,8 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	 * @param backupFile
 	 * @return
 	 */
-	public List<Entity> common(BackupFile backupFile){
+	@Override
+	public List<Entity> common(EntityManager backupFile){
 		ArrayList<Entity> result = new ArrayList<Entity>();
 		for (Entity entity: this){
 			if (backupFile.getByFingerPrint(entity.getFingerPrint())!=null){
@@ -390,7 +423,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	}
 	
 	public Collection<Entity> deleted() {
-		BackupFile pbf = getPreviosBackupFile();
+		BackupFile pbf = getPreviousBackupFile();
 		if (pbf!=null){
 			return pbf.unique(this);
 		}
@@ -398,7 +431,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	}
 	
 	public Collection<Entity> added() {
-		BackupFile pbf = getPreviosBackupFile();
+		BackupFile pbf = getPreviousBackupFile();
 		if (pbf!=null){
 			return this.unique(pbf);
 		}		
@@ -513,7 +546,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		return metadata;
 	}
 	
-	protected BackupFile getPreviosBackupFile() {
+	protected BackupFile getPreviousBackupFile() {
 		if (previousBackupFile==null){
 			String previousFileName = metadata.getFileName();
 			if (previousFileName!=null){
@@ -543,6 +576,23 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 
 	public String getDatabaseVersion() {
 		return databaseVersion;
+	}
+
+	@Override
+	public Map<String, String> getReferenceTypes() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Map<String, String[]> getFingerPrintDefinitions() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean contains(Entity entity) {
+		return getByFingerPrint(entity.getFingerPrint())!=null;
 	}
 	
 }

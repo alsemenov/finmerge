@@ -14,6 +14,9 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import ru.xibodoh.finmerge.Entity;
+import ru.xibodoh.finmerge.EntityManager;
+
 class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 	
 	private static final Map<String, String[]> fpDefenitions = new HashMap<String, String[]>();
@@ -85,6 +88,8 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 			Object value = getValue(key);
 			if (value instanceof Entity){
 				fingerPrint.append('{').append(((Entity) value).getFingerPrint()).append('}');
+			} else if (value instanceof Date){
+				fingerPrint.append(((Date) value).getTime());
 			} else {
 				fingerPrint.append(value);
 			}
@@ -109,6 +114,10 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 		
 		if (key.endsWith("_id") && !"_id".equals(key)){
 			return entityManager.getById(getValueType(key), value);			
+		} else if ("datetime".equals(key)){
+			return new Date(Long.parseLong(value));
+		} else if ("from_amount".equals(key) || "to_amount".equals(key)){
+			return Long.parseLong(value);
 		}
 		return value;
 	}
@@ -162,8 +171,8 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 			String title;
 			if ((value instanceof Entity) && (title = ((Entity) value).get("title"))!=null){
 				value = title;				
-			} else if ("datetime".equals(key) && value!=null && !"0".equals(value)){				 
-				value = sdf.format(new Date(Long.parseLong((String) value)));
+			} else if (value instanceof Date){				 
+				value = sdf.format((Date)value);
 			} else {
 				value = get(key);
 			}
@@ -175,5 +184,9 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 		sb.append("}");
 		return sb.toString();
 	}
-	
+
+	@Override
+	public Entity getParent() {
+		return null;
+	}
 }

@@ -12,8 +12,15 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
+import ru.xibodoh.finmerge.Entity;
+import ru.xibodoh.finmerge.EntityManager;
+/**
+ * in Finansisto integer field type holds income/expense flag. 0 for expense, 1 for income.  
+ * @author semenov
+ *
+ */
 class CategoryEntity extends EntityImpl {
-
+	
 	private CategoryEntity parent = null;
 	private int left, right;
 	private LinkedList<CategoryEntity> children = null;
@@ -213,6 +220,12 @@ class CategoryEntity extends EntityImpl {
 		clone.modified = false;
 		return clone;
 	}
+
+	@Override
+	public Entity getParent() {
+		return parent;
+	}
+	
 	
 	
 }

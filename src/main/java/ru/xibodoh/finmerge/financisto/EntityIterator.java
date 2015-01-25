@@ -15,6 +15,9 @@ import java.io.InputStreamReader;
 import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 
+import ru.xibodoh.finmerge.Entity;
+import ru.xibodoh.finmerge.EntityManager;
+
 
 class EntityIterator implements Iterator<Entity>{
 
