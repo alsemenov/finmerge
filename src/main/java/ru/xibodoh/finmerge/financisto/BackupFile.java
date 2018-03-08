@@ -39,9 +39,9 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	private final static String PACKAGE = "ru.orangesoftware.financisto";
 	
 	private final static int MIN_VERSION_CODE = 82;
-	private final static int MAX_VERSION_CODE = 93;
+	private final static int MAX_VERSION_CODE = 109;
 	private final static int MIN_DATABASE_VERSION = 197;
-	private final static int MAX_DATABASE_VERSION = 205;
+	private final static int MAX_DATABASE_VERSION = 214;
 	
 	public static class MetaData {
 		private String fileName;

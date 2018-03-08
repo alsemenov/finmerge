@@ -4,7 +4,7 @@
 
 	<groupId>ru.xibodoh</groupId>
 	<artifactId>finmerge</artifactId>
-	<version>1.0.6</version>
+	<version>1.0.7</version>
 	<packaging>jar</packaging>
 	<licenses>
 		<license>
