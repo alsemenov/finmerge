@@ -121,8 +121,12 @@ public class AbilityCashXMLFile extends AbstractEntityManager implements EntityM
 		@Override
 		public Iterator<String> keys() {
 			return Collections.<String>emptyIterator();
-		}		
-		
+		}
+
+		@Override
+		public int getVersion() {
+			return 0;
+		}
 	}
 	
 	private File file;
@@ -633,7 +637,7 @@ public class AbilityCashXMLFile extends AbstractEntityManager implements EntityM
 				if (Entity.TYPE_CATEGORY.equals(type)){
 					int index = result.length();
 					// do not use root and its first child, there are artificial 
-					for (Entity e=entity; e!=null && e.getParent()!=null && e.getParent().getParent()!=null; e=e.getParent()){
+					for (Entity e=entity; e!=null && e.getParent()!=null && e.getParent()!=null; e=e.getParent()){
 						result.insert(index, e.get("title"));
 						result.insert(index, '\\');
 					}
@@ -781,8 +785,8 @@ public class AbilityCashXMLFile extends AbstractEntityManager implements EntityM
 				for (Entity e = entity; e!=null && level<3; e=e.getParent()){
 					level++;
 				}
-				AbstractTreeEntity localParent = null;
-				if (level<=2){
+				AbstractTreeEntity localParent;
+				if (level<2){
 					localParent = rootDefaultChild;
 				} else {
 					localParent = (AbstractTreeEntity) getById(clone.getType(), add(entity.getParent()));

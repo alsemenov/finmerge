@@ -7,8 +7,6 @@
 */
 package ru.xibodoh.finmerge;
 
-import java.util.Date;
-
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;

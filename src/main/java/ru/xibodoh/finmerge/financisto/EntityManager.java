@@ -7,6 +7,7 @@
 */
 package ru.xibodoh.finmerge.financisto;
 
+@Deprecated
 public interface EntityManager extends Iterable<Entity> {
 	
 	public Entity getById(String type, String id);

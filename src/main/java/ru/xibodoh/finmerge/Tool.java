@@ -54,7 +54,8 @@ public class Tool {
 			"\t\tIf omitted, the result will be written in every input folder.\n"+
 			"\t\tIf there are no input folders, the result will be written to current folder.";
 			
-	private final static String[] COMMANDS = {"print", "added", "deleted", "comm", "equal", "merge", "metadata", "log"};
+	private final static String[] COMMANDS = {"print", "added", "deleted", "comm", "equal", "merge", "metadata", "log",
+			"clear-metadata"};
 	
 	
 	/**
@@ -85,7 +86,7 @@ public class Tool {
     	logger.info(COPYRIGHT);
     	if (inputFiles.isEmpty()){
     		logger.info(USAGE);
-    		logger.info(DONATE_TRANSLIT);
+//    		logger.info(DONATE_TRANSLIT);
     		return;
     	}
     	if (command==null){
@@ -145,15 +146,20 @@ public class Tool {
 							System.out.println(result.unique(entityManager).isEmpty() && entityManager.unique(result).isEmpty());
 							result = null;
 						}
-					} else if ("metadata".equals(command)){
+					} else if ("metadata".equals(command)) {
 						MetaData metaData = entityManager.getMetaData();
-						System.out.println("file name: "+metaData.getFileName());
-						System.out.println("parents: "+Arrays.toString(metaData.getParents()));
+						System.out.println("file name: " + metaData.getFileName());
+						System.out.println("parents: " + Arrays.toString(metaData.getParents()));
 						Iterator<String> keys = metaData.keys();
-						while (keys.hasNext()){
+						while (keys.hasNext()) {
 							String key = keys.next();
-							System.out.println(key+": "+metaData.get(key));
+							System.out.println(key + ": " + metaData.get(key));
 						}
+					} else if ("clear-metadata".equals(command)){
+						MetaData metaData = entityManager.getMetaData();
+						metaData.setParents(null);
+						metaData.setFileName(null);
+						entityManager.save(file);
 					} else if ("log".equals(command)){
 						printLog(entityManager, "", true);
 					} else if ("merge".equals(command)){					
@@ -164,7 +170,9 @@ public class Tool {
 						}
 					}
 				} catch (Exception e) {
-					logger.log(Level.WARNING, "Failed to read file {0}: {1}", new Object[]{file.getAbsolutePath(), e.getMessage()});					
+					logger.log(Level.WARNING, "Failed to read file {0}: {1}", new Object[]{file.getAbsolutePath(), e.getMessage()});
+					logger.log(Level.WARNING, "", e);
+					e.printStackTrace();
 				}    			
     		} 
     	}
@@ -186,7 +194,7 @@ public class Tool {
 				}
     		}
     	}
-		logger.info(DONATE_TRANSLIT);
+//		logger.info(DONATE_TRANSLIT);
 //    	else {
 //    		logger.info("The result is empty");
 //    	}    	    	

@@ -25,7 +25,7 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 		fpDefenitions.put(TYPE_ACCOUNT, new String[]{"title", "currency_id"});
 		refTypes.put("currency_id", Entity.TYPE_CURRENCY);
 		
-		fpDefenitions.put(TYPE_ATTRIBUTES, new String[]{"type", "name"});
+		fpDefenitions.put(TYPE_ATTRIBUTES, new String[]{"type", "name"}); // only for database version < 213
 		
 		fpDefenitions.put(TYPE_BUDGET, new String[]{"title", "category_id", "currency_id", "start_date", "end_date", "amount","project_id"});
 		refTypes.put("category_id", TYPE_CATEGORY);
@@ -62,8 +62,11 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 		refTypes.put("last_project_id", TYPE_PROJECT);
 		refTypes.put("original_currency_id", TYPE_CURRENCY);
 		refTypes.put("last_category_id", TYPE_CATEGORY);
+
+		fpDefenitions.put(TYPE_SMS_TEMPLATE, new String[]{"title", "template", "category_id", "account_id", "is_income"});
+		refTypes.put("account_id", TYPE_ACCOUNT);
 		
-	};
+	}
 
 	protected EntityManager entityManager;
 	protected int referenceCounter = 0;
@@ -169,8 +172,12 @@ class EntityImpl extends LinkedHashMap<String, String> implements Entity{
 			sb.append(key).append('=');
 			Object value = getValue(key);
 			String title;
-			if ((value instanceof Entity) && (title = ((Entity) value).get("title"))!=null){
-				value = title;				
+			if (value instanceof Entity) {
+				if ((title = ((Entity) value).get("title"))!=null){
+					value = title;
+				} else {
+					value = value.toString();
+				}
 			} else if (value instanceof Date){				 
 				value = sdf.format((Date)value);
 			} else {

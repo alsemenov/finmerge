@@ -21,7 +21,7 @@ import ru.xibodoh.finmerge.EntityManager;
 
 class EntityIterator implements Iterator<Entity>{
 
-		private BufferedReader reader = null;
+		private BufferedReader reader;
 		private String nextLine;
 		private final EntityManager entityManager;
 		

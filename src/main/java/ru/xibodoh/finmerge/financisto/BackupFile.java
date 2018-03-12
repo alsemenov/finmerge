@@ -7,34 +7,21 @@
 */
 package ru.xibodoh.finmerge.financisto;
 
-import static ru.xibodoh.finmerge.Entity.TYPE_CATEGORY;
-import static ru.xibodoh.finmerge.Entity.TYPE_TRANSACTIONS;
-
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.zip.GZIPOutputStream;
-
 import ru.xibodoh.finmerge.Entity;
 import ru.xibodoh.finmerge.EntityManager;
 
+import java.io.*;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+import java.util.zip.GZIPOutputStream;
+
+import static ru.xibodoh.finmerge.Entity.*;
+
 public class BackupFile implements EntityManager, Iterable<Entity>{
-	
+
 	private static final String FINMERGE_FILE_ATTRIBUTE = "finmerge_file";
 
 	private final static Logger logger = Logger.getLogger(BackupFile.class.getName());
@@ -42,33 +29,37 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	private final static String PACKAGE = "ru.orangesoftware.financisto";
 	
 	private final static int MIN_VERSION_CODE = 82;
-	private final static int MAX_VERSION_CODE = 93;
+	private final static int MAX_VERSION_CODE = 109;
 	private final static int MIN_DATABASE_VERSION = 197;
-	private final static int MAX_DATABASE_VERSION = 205;
-	
+	private final static int MAX_DATABASE_VERSION = 214;
+
+	private final static Set<String> ENTITIES_WITH_SYSTEM_VALUES = new HashSet<String>(
+			Arrays.asList(Entity.TYPE_CATEGORY, Entity.TYPE_ATTRIBUTES, Entity.TYPE_PROJECT, Entity.TYPE_LOCATIONS)
+	);
+	public static final int VERSION_213 = 213;
+
+
 	public static class MetaData implements ru.xibodoh.finmerge.MetaData {
+
+		public static final String PACKAGE_NAME = "package name";
+		public static final String VERSION_NAME = "version name";
+		public static final String VERSION_CODE = "version code";
+		public static final String DATABASE_VERSION = "database version";
+
 		private String fileName;
 		private String[] parents;
-		private Map<String, Object> data;
-		
+		private final Map<String, Object> data;
+		private int version = -1;
+
 		public MetaData() {
 			data = new HashMap<>();
-		}
-		
-		public MetaData(Entity entity, Map<String, Object> data){
-			this.fileName = entity.get("default_value");
-			this.data = data;
-			String list = entity.get("list_values");
-			if (list!=null){
-				this.parents = list.split(";");
-			}
 		}
 		
 		public Entity getEntity(EntityManager entityManager){
 			if (fileName!=null || parents!=null) {
 				EntityImpl entity = new EntityImpl(entityManager);
 				entity.set("$ENTITY", Entity.TYPE_ATTRIBUTES);
-				entity.set("name", FINMERGE_FILE_ATTRIBUTE);
+				entity.set(getVersion()>=VERSION_213 ? "title" : "name", FINMERGE_FILE_ATTRIBUTE);
 				entity.set("type", "3"); // == type list				
 				entity.set("default_value", fileName);
 				if (parents!=null){
@@ -107,6 +98,36 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		public Object get(String key){
 			return data.get(key);
 		}
+
+		void set(String key, String value){
+			data.put(key, value);
+			if (DATABASE_VERSION.equals(key)){
+				try {
+					version = Integer.parseInt(value);
+				} catch (NumberFormatException e){
+					logger.warning("Invalid database version: '"+value+"'");
+				}
+			}
+		}
+
+		void set(String packageName, String versionName, String versionCode, String databaseVersion){
+			set(PACKAGE_NAME, packageName);
+			set(VERSION_NAME, versionName);
+			set(VERSION_CODE, versionCode);
+			set(DATABASE_VERSION, databaseVersion);
+		}
+
+		void setEntity(Entity entity){
+			this.fileName = entity.get("default_value");
+			String list = entity.get("list_values");
+			if (list!=null){
+				this.parents = list.split(";");
+			}
+		}
+
+		public int getVersion(){
+			return version;
+		}
 	}
 	
 	
@@ -116,19 +137,23 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	private String versionName;
 	private String databaseVersion;
 	private CategoryEntity rootCategory;
-	private MetaData metadata = new MetaData();
+	private final MetaData metadata = new MetaData();
 	private BackupFile previousBackupFile = null;
-	
+
 	/** map: type+id => entity */
 	private final Map<String, Entity> idMap = new LinkedHashMap<String, Entity>();
 	/** map: fingerPrint => entity */
 	private final Map<String, Entity> fingerPrintMap = new HashMap<String, Entity>();
 	/** map: type => nextId */
 	private final Map<String, Integer> nextIdMap = new HashMap<String, Integer>();
-	
+
 	public BackupFile(File file) throws IndexOutOfBoundsException, IOException {
+		this(file, true);
+	}
+
+	public BackupFile(File file, boolean loadSystemEntities) throws IndexOutOfBoundsException, IOException {
 		this.file = file;
-		load(file);
+		load(file, loadSystemEntities);
 	}
 	
 	@Override
@@ -169,7 +194,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		}
 	}
 	
-	private void load(File file) throws IndexOutOfBoundsException, IOException{
+	private void load(File file, boolean loadSystemEntities) throws IndexOutOfBoundsException, IOException{
 		rootCategory = createRootCategory();
 		
 		EntityIterator it = new EntityIterator(file, this);		
@@ -177,7 +202,9 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		versionCode = it.versionCode;
 		versionName = it.versionName;
 		databaseVersion = it.databaseVersion;
-		
+
+		metadata.set(packageName, versionName, versionCode, databaseVersion);
+
 		logger.log(Level.FINER, "Loading file {0}", file.getAbsolutePath());
 		logger.log(Level.FINER, "\tpackage: {0}",packageName);
 		logger.log(Level.FINER, "\tversionCode: {0}", versionCode);
@@ -185,40 +212,42 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		logger.log(Level.FINER, "\tdatabaseVersion: {0}",databaseVersion);
 		
 		checkVersion(packageName, versionCode, versionName, databaseVersion);
-				
+
 		while (it.hasNext()){
 			Entity entity = it.next();
 			
 			String id = entity.getId();
 			String type = entity.getType();
 
-			if (Entity.TYPE_ATTRIBUTES.equals(type) && FINMERGE_FILE_ATTRIBUTE.equals(entity.get("name"))){
-				HashMap<String, Object> data = new HashMap<>();
-				data.put("package name", packageName);
-				data.put("version name", versionName);
-				data.put("version code", versionCode);
-				data.put("database version", databaseVersion);
-				metadata = new MetaData(entity, data);
+			if (Entity.TYPE_ATTRIBUTES.equals(type) &&
+					(FINMERGE_FILE_ATTRIBUTE.equals(entity.get("name")) || FINMERGE_FILE_ATTRIBUTE.equals(entity.get("title")))){
+				metadata.setEntity(entity);
 				continue; // avoid further processing of metadata
 			}
 			
 			if (TYPE_CATEGORY.equals(entity.getType())){
 				entity = new CategoryEntity(entity);
-				rootCategory.addDescendant((CategoryEntity) entity);
+				if (!"0".equals(entity.getId())){
+					rootCategory.addDescendant((CategoryEntity) entity);
+				}
+			}
+
+			if (TYPE_ATTRIBUTES.equals(entity.getType())){
+				entity = new AttributesEntity(entity);
 			}
 			
 			if (id==null){
 				id = getNextId(type);
-			}			
-			idMap.put(type+id, entity);
+			}
+			if (loadSystemEntities || !ENTITIES_WITH_SYSTEM_VALUES.contains(entity.getType()) || !"0".equals(entity.getId())) {
+				idMap.put(type + id, entity);
+			}
 			
 			int i = Integer.parseInt(id);
 			Integer n = nextIdMap.get(type);
 			if (n==null || i+1>n){
 				nextIdMap.put(type, i+1);
 			}
-			
-
 		}
 		
 		for (Entity entity: idMap.values()){			
@@ -249,7 +278,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		}
 	}
 
-	public void save(File file) throws FileNotFoundException, IOException{
+	public void save(File file) throws IOException{
 		rootCategory.rebuildTree(-1);
 		metadata.setFileName(file.getName());
 		GZIPOutputStream out = new GZIPOutputStream(new FileOutputStream(file));		
@@ -532,10 +561,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 
 	@Override
 	public boolean equals(Object obj) {
-		if (obj instanceof BackupFile){
-			return idMap.equals(((BackupFile) obj).idMap);
-		}
-		return false;
+		return obj instanceof BackupFile && idMap.equals(((BackupFile) obj).idMap);
 	}
 
 	public Iterator<Entity> iterator() {
@@ -548,12 +574,15 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	
 	protected BackupFile getPreviousBackupFile() {
 		if (previousBackupFile==null){
-			String previousFileName = metadata.getFileName();
+			String previousFileName = System.getProperty(this.getClass().getName()+".referenceFile");
+			if (previousFileName==null){
+				previousFileName = metadata.getFileName();
+			}
 			if (previousFileName!=null){
 				File previousFile = new File(file.getParentFile(), previousFileName);
 				if (previousFile.exists() && previousFile.canRead()){
 					try {
-						previousBackupFile = new BackupFile(previousFile);
+						previousBackupFile = new BackupFile(previousFile, getMetaData().getVersion()< VERSION_213);
 					} catch (Exception e) {
 						logger.log(Level.FINE, "Failed to load previous backup file of "+file.getAbsolutePath()+" ", e);
 					}
@@ -594,5 +623,9 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	public boolean contains(Entity entity) {
 		return getByFingerPrint(entity.getFingerPrint())!=null;
 	}
-	
+
+	public Stream<Entity> stream() {
+		return StreamSupport.stream(spliterator(), false);
+	}
+
 }

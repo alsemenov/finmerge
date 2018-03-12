@@ -96,7 +96,7 @@ class CategoryEntity extends EntityImpl {
 	}
 
 	
-	private final boolean isParent(CategoryEntity ce){
+	private boolean isParent(CategoryEntity ce){
 		return left<ce.left && ce.right<right;
 	}
 	

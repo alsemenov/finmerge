@@ -10,6 +10,7 @@ package ru.xibodoh.finmerge;
 import java.util.Iterator;
 
 public interface MetaData {
+	public int getVersion();
 	public String getFileName();
 	public void setFileName(String fileName);
 	public String[] getParents();

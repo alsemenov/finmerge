@@ -65,10 +65,7 @@ public abstract class AbstractEntityManager implements EntityManager {
 	
 	@Override
 	public boolean equals(Object obj) {
-		if (obj instanceof AbstractEntityManager){
-			return idMap.equals(((AbstractEntityManager) obj).idMap);
-		}
-		return false;
+		return obj instanceof AbstractEntityManager && idMap.equals(((AbstractEntityManager) obj).idMap);
 	}
 	
 	/**

@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 public class Log {
 	public static void configure(String level){		
-		Level l = null;
+		Level l;
 		try{
 			l = Level.parse(level);
 		} catch (Exception e){

@@ -34,6 +34,7 @@ public interface Entity extends Cloneable {
 
 	public final String TYPE_ACCOUNT_FOLDER = "account_folder"; // ref account
 	public final String TYPE_FILE_METADATA = "metadata";
+	public final String TYPE_SMS_TEMPLATE = "sms_template";
 	
 	// primitive types
 	public final String TYPE_DATETIME_LONG = "datetime_long";
