@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 
 import ru.xibodoh.finmerge.financisto.BackupFile;
 
+@Deprecated // Use Tool instead
 public class App {
 
 	private static final Logger logger = Logger.getLogger(App.class.getName());

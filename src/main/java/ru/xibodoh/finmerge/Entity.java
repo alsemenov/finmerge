@@ -7,72 +7,68 @@
 */
 package ru.xibodoh.finmerge;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
 import java.util.Iterator;
-import java.util.Map;
 
 
 public interface Entity extends Cloneable {
 
 	// simple types
-	public final String TYPE_CURRENCY = "currency";
-	public final String TYPE_ATTRIBUTES = "attributes";
-	public final String TYPE_CATEGORY = "category";
-	public final String TYPE_LOCATIONS = "locations";
-	public final String TYPE_PROJECT = "project";
-	public final String TYPE_PAYEE = "payee";
+	String TYPE_CURRENCY = "currency";
+	String TYPE_ATTRIBUTES = "attributes";
+	String TYPE_CATEGORY = "category";
+	String TYPE_LOCATIONS = "locations";
+	String TYPE_PROJECT = "project";
+	String TYPE_PAYEE = "payee";
 
 	// compound types
-	public final String TYPE_ACCOUNT = "account"; // ref currency
-	public final String TYPE_CATEGORY_ATTRIBUTE = "category_attribute"; // ref category ref attributes
-	public final String TYPE_TRANSACTION_ATTRIBUTE = "transaction_attribute"; // ref transactions ref attributes
-	public final String TYPE_BUDGET = "budget"; // ref category ref currency ref budget ref project
-	public final String TYPE_TRANSACTIONS = "transactions"; // ref account x2 category project location payee
-	public final String TYPE_CURRENCY_EXCHANGE_RATE = "currency_exchange_rate"; // ref currency x2 
+	String TYPE_ACCOUNT = "account"; // ref currency
+	String TYPE_CATEGORY_ATTRIBUTE = "category_attribute"; // ref category ref attributes
+	String TYPE_TRANSACTION_ATTRIBUTE = "transaction_attribute"; // ref transactions ref attributes
+	String TYPE_BUDGET = "budget"; // ref category ref currency ref budget ref project
+	String TYPE_TRANSACTIONS = "transactions"; // ref account x2 category project location payee
+	String TYPE_CURRENCY_EXCHANGE_RATE = "currency_exchange_rate"; // ref currency x2
 
-	public final String TYPE_ACCOUNT_FOLDER = "account_folder"; // ref account
-	public final String TYPE_FILE_METADATA = "metadata";
-	public final String TYPE_SMS_TEMPLATE = "sms_template";
+	String TYPE_ACCOUNT_FOLDER = "account_folder"; // ref account
+	String TYPE_FILE_METADATA = "metadata";
+	String TYPE_SMS_TEMPLATE = "sms_template";
 	
 	// primitive types
-	public final String TYPE_DATETIME_LONG = "datetime_long";
-	public final String TYPE_DATETIME_TEXT = "datetime_text";
-	public final String TYPE_AMOUNT_LONG = "amount_long";
-	public final String TYPE_AMOUNT_DOUBLE = "amount_double";
+	String TYPE_DATETIME_LONG = "datetime_long";
+	String TYPE_DATETIME_TEXT = "datetime_text";
+	String TYPE_AMOUNT_LONG = "amount_long";
+	String TYPE_AMOUNT_DOUBLE = "amount_double";
 
-	public String getId();
+	String getId();
 	
-	public void  setId(String id);
+	void  setId(String id);
 	
-	public String getFingerPrint();
+	String getFingerPrint();
 		
-	public Entity getParent();
+	Entity getParent();
 	
-	public String getType();
+	String getType();
 	
-	public String get(String key);
+	String get(String key);
 	
-	public Object getValue(String key);
+	Object getValue(String key);
 	
-	public String getValueType(String key);
+	String getValueType(String key);
 	
-	public void set(String key, String value);
+	void set(String key, String value);
 	
-	public Iterator<String> keys();
+	Iterator<String> keys();
 	
-	public EntityManager getEntityManager();
+	EntityManager getEntityManager();
 	
-	public void setEntityManager(EntityManager entityManager);
+	void setEntityManager(EntityManager entityManager);
 	
-	public Object clone();
+	Object clone();
 	
-	public int getReferenceCount();
+	int getReferenceCount();
 	
-	public void updateReferenceCount(int increment);
+	void updateReferenceCount(int increment);
 	
-	public void setReferenceCount(int value);
+	void setReferenceCount(int value);
 	
 //	public void read(BufferedReader br) throws IOException;
 	

@@ -10,12 +10,12 @@ package ru.xibodoh.finmerge;
 import java.util.Iterator;
 
 public interface MetaData {
-	public int getVersion();
-	public String getFileName();
-	public void setFileName(String fileName);
-	public String[] getParents();
-	public void setParents(String[] parents);
+	int getVersion();
+	String getFileName();
+	void setFileName(String fileName);
+	String[] getParents();
+	void setParents(String[] parents);
 	
-	public Object get(String key);
-	public Iterator<String> keys();
+	Object get(String key);
+	Iterator<String> keys();
 }

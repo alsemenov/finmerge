@@ -10,9 +10,9 @@ package ru.xibodoh.finmerge.financisto;
 @Deprecated
 public interface EntityManager extends Iterable<Entity> {
 	
-	public Entity getById(String type, String id);
+	Entity getById(String type, String id);
 	
-	public Entity getByFingerPrint(String fingerPrint);
+	Entity getByFingerPrint(String fingerPrint);
 	
-	public String add(Entity entity);
+	String add(Entity entity);
 }

@@ -7,8 +7,6 @@
 */
 package ru.xibodoh.finmerge.abilitycash;
 
-import java.util.LinkedList;
-
 import ru.xibodoh.finmerge.AbstractTreeEntity;
 import ru.xibodoh.finmerge.EntityManager;
 

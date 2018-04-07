@@ -46,7 +46,9 @@ public class Tool {
 			"\t\t\t3 - print unique entities for second file\n" +
 			"\t\tequal - compare two files for equality\n" +
 			"\t\tmerge - merge two files\n" +
+			"\t\tupdate - update first file with changes from others\n"+
 			"\t\tmetadata - print input file metadata\n"+
+			"\t\tclear-metadata - clear input file metadata\n"+
 			"\t\tlog - print input file changelog\n"+
 			"\t inputFile - input file or folder name\n"+
 			"\t\tIf folder is given, the most recent backup file in it will be selected.\n"+
@@ -55,7 +57,7 @@ public class Tool {
 			"\t\tIf there are no input folders, the result will be written to current folder.";
 			
 	private final static String[] COMMANDS = {"print", "added", "deleted", "comm", "equal", "merge", "metadata", "log",
-			"clear-metadata"};
+			"clear-metadata", "update"};
 	
 	
 	/**
@@ -167,6 +169,12 @@ public class Tool {
 							result = entityManager;
 						} else {
 							result.merge(entityManager);
+						}
+					} else if ("update".equals(command)){
+						if (result==null){
+							result = entityManager;
+						} else {
+							result.update(entityManager);
 						}
 					}
 				} catch (Exception e) {

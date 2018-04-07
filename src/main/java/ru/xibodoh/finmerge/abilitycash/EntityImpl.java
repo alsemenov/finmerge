@@ -7,8 +7,6 @@
 */
 package ru.xibodoh.finmerge.abilitycash;
 
-import java.util.Iterator;
-
 import ru.xibodoh.finmerge.AbstractEntity;
 import ru.xibodoh.finmerge.Entity;
 import ru.xibodoh.finmerge.EntityManager;

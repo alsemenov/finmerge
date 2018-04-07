@@ -1,7 +1,7 @@
 /*
   ~ Copyright (c) 2014-2015 Aleksei Semenov (aka xibodoh)
   ~ All rights reserved. This program and the accompanying materials
-  ~ are made available under the terms of the GNU Public License v2.0
+  ~ are made available under the terms of the GNU License v2.0
   ~ which accompanies this distribution, and is available at
   ~ http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 */
@@ -18,34 +18,38 @@ import javax.xml.stream.XMLStreamException;
 
 public interface EntityManager extends Iterable<Entity> {
 
-	public File getFile();
+	String getFileName();
 	
-	public Entity getById(String type, String id);
+	Entity getById(String type, String id);
 	
-	public Entity getByFingerPrint(String fingerPrint);
+	Entity getByFingerPrint(String fingerPrint);
 	
-	public String add(Entity entity);
+	String add(Entity entity);
 	
-	public Entity remove(Entity entity);
-	
-	public MetaData getMetaData();
-	
-	public Map<String, String> getReferenceTypes();
-	
-	public Map<String, String[]> getFingerPrintDefinitions();
+	Entity remove(Entity entity);
 
-	public boolean contains(Entity entity);
+	int remove(Collection<Entity> entities);
 	
-	public List<Entity> unique(EntityManager entityManager);
+	MetaData getMetaData();
 	
-	public List<Entity> common(EntityManager entityManager);
+	Map<String, String> getReferenceTypes();
 	
-	public void merge(EntityManager backupFile);
+	Map<String, String[]> getFingerPrintDefinitions();
+
+	boolean contains(Entity entity);
 	
-	public Collection<Entity> added();
+	List<Entity> unique(EntityManager entityManager);
 	
-	public Collection<Entity> deleted();
+	List<Entity> common(EntityManager entityManager);
+	
+	void merge(EntityManager backupFile);
+
+	void update(EntityManager otherFile);
+	
+	Collection<Entity> added();
+	
+	Collection<Entity> deleted();
 	
 	// TODO narrow exceptions list
-	public void save(File file) throws IOException, XMLStreamException, FactoryConfigurationError;
+	void save(File file) throws IOException, XMLStreamException, FactoryConfigurationError;
 }

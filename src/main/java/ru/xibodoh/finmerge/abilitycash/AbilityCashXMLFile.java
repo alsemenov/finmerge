@@ -151,8 +151,8 @@ public class AbilityCashXMLFile extends AbstractEntityManager implements EntityM
 	}
 	
 	@Override
-	public File getFile() {
-		return file;
+	public String getFileName() {
+		return file.getName();
 	}
 
 	private File getConfigFile(File file, boolean forSaving){

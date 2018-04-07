@@ -26,8 +26,7 @@ public class AttributesEntity extends EntityImpl {
 
 	public String getFingerPrint() {
 		String type = getType();
-		String fingerPrint = type + get("type") + get(getTitleKey());
-		return fingerPrint;
+		return type + get("type") + get(getTitleKey());
 	}
 
 	@Override

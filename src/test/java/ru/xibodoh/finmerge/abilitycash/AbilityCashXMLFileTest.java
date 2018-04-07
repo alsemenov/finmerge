@@ -7,27 +7,10 @@
 */
 package ru.xibodoh.finmerge.abilitycash;
 
-import static ru.xibodoh.finmerge.Entity.TYPE_ACCOUNT;
-import static ru.xibodoh.finmerge.Entity.TYPE_CATEGORY;
-import static ru.xibodoh.finmerge.Entity.TYPE_PAYEE;
-import static ru.xibodoh.finmerge.Entity.TYPE_PROJECT;
-import static ru.xibodoh.finmerge.Entity.TYPE_TRANSACTIONS;
-
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
-import java.util.List;
 
 import junit.framework.TestCase;
-import ru.xibodoh.finmerge.AbstractTreeEntity;
-import ru.xibodoh.finmerge.Entity;
-import ru.xibodoh.finmerge.EntityManager;
-import ru.xibodoh.finmerge.financisto.BackupFile;
 
 public class AbilityCashXMLFileTest extends TestCase {
 

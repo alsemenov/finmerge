@@ -7,8 +7,6 @@
 */
 package ru.xibodoh.finmerge;
 
-import java.io.File;
-import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -167,7 +165,7 @@ public abstract class AbstractEntityManager implements EntityManager {
 	
 	/** 
 	 * returns entities unique for this backup file, i.e. entities absent in given backupFile
-	 * @param backupFile
+	 * @param entityManager
 	 * @return
 	 */
 	public List<Entity> unique(EntityManager entityManager){
@@ -195,21 +193,22 @@ public abstract class AbstractEntityManager implements EntityManager {
 	}	
 	
 	protected EntityManager getPreviousVersion() {
-		if (previousVersion ==null){
-			String previousFileName = getMetaData().getFileName();
-			if (previousFileName!=null){
-				File previousFile = new File(getFile().getParentFile(), previousFileName);
-				if (previousFile.exists() && previousFile.canRead()){
-					try {
-						Constructor<? extends AbstractEntityManager> ctor = getClass().getDeclaredConstructor(File.class);						
-						previousVersion = ctor.newInstance(previousFile);
-					} catch (Exception e) {
-						logger.log(Level.FINE, "Failed to load previous backup file of "+getFile().getAbsolutePath()+" ", e);
-					}
-				}
-			}
-		}
-		return previousVersion;
+		return null;
+//		if (previousVersion ==null){
+//			String previousFileName = getMetaData().getFileName();
+//			if (previousFileName!=null){
+//				File previousFile = new File(getFile().getParentFile(), previousFileName);
+//				if (previousFile.exists() && previousFile.canRead()){
+//					try {
+//						Constructor<? extends AbstractEntityManager> ctor = getClass().getDeclaredConstructor(File.class);
+//						previousVersion = ctor.newInstance(previousFile);
+//					} catch (Exception e) {
+//						logger.log(Level.FINE, "Failed to load previous backup file of "+getFile().getAbsolutePath()+" ", e);
+//					}
+//				}
+//			}
+//		}
+//		return previousVersion;
 	}
 	
 	
@@ -280,7 +279,37 @@ public abstract class AbstractEntityManager implements EntityManager {
 			logger.log(Level.WARNING, "Error while detecting deleted entities ", e);
 		}
 		
-		getMetaData().setParents(new String[]{getFile().getName(), that.getFile().getName()});
+		getMetaData().setParents(new String[]{getFileName(), that.getFileName()});
 	}
 
+
+	@Override
+	public void update(EntityManager otherFile){
+		for (Entity entity: otherFile.added()){
+			this.add(entity);
+		}
+
+		remove(otherFile.deleted());
+	}
+
+	@Override
+	public int remove(Collection<Entity> entities){
+		ArrayList<Entity> toDelete = new ArrayList<Entity>(entities);
+		int count = toDelete.size();
+		boolean deleted = true;
+		while (deleted && !toDelete.isEmpty()){
+			deleted = false;
+			Iterator<Entity> it = toDelete.iterator();
+			while(it.hasNext()){
+				if (remove(it.next())!=null){
+					deleted = true;
+					it.remove();
+				}
+			}
+		}
+		for (Entity e: toDelete){
+			logger.log(Level.FINE, "Entity {0} is not deleted, because it is used", e);
+		}
+		return count - toDelete.size();
+	}
 }

@@ -20,7 +20,7 @@ import java.util.zip.GZIPOutputStream;
 
 import static ru.xibodoh.finmerge.Entity.*;
 
-public class BackupFile implements EntityManager, Iterable<Entity>{
+public class BackupFile implements EntityManager, Iterable<Entity>{ // TODO extends AbstractEntityManager
 
 	private static final String FINMERGE_FILE_ATTRIBUTE = "finmerge_file";
 
@@ -130,8 +130,9 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		}
 	}
 	
-	
+
 	private File file;
+	private String fileName;
 	private String packageName;
 	private String versionCode;
 	private String versionName;
@@ -153,12 +154,22 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 
 	public BackupFile(File file, boolean loadSystemEntities) throws IndexOutOfBoundsException, IOException {
 		this.file = file;
+		this.fileName = file.getName();
 		load(file, loadSystemEntities);
 	}
-	
+
+	public BackupFile(String fileName, InputStream inputStream) throws IndexOutOfBoundsException, IOException {
+		this(fileName, inputStream, true);
+	}
+
+	public BackupFile(String fileName, InputStream inputStream, boolean loadSystemEntities) throws IndexOutOfBoundsException, IOException {
+		this.fileName = fileName;
+		load(fileName, inputStream, loadSystemEntities);
+	}
+
 	@Override
-	public File getFile() {
-		return file;
+	public String getFileName() {
+		return fileName;
 	}
 	
 	private CategoryEntity createRootCategory(){
@@ -166,6 +177,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		ce.set("$ENTITY", Entity.TYPE_CATEGORY);
 		ce.set("title", "root");
 		ce.set("type", "0");
+		ce.set("_id", "0");
 		ce.set("left", Integer.toString(Integer.MIN_VALUE));
 		ce.set("right", Integer.toString(Integer.MAX_VALUE));
 		return ce;
@@ -193,11 +205,16 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 			throw new RuntimeException("Invalid database version: "+databaseVersionString, e);
 		}
 	}
-	
-	private void load(File file, boolean loadSystemEntities) throws IndexOutOfBoundsException, IOException{
+
+	private void load(File file, boolean loadSystemEntities) throws IndexOutOfBoundsException, IOException {
+		try (InputStream stream = new FileInputStream(file)) {
+			load(file.getAbsolutePath(), stream, loadSystemEntities);
+		}
+	}
+	private void load(String fileName, InputStream stream, boolean loadSystemEntities) throws IndexOutOfBoundsException, IOException {
 		rootCategory = createRootCategory();
 		
-		EntityIterator it = new EntityIterator(file, this);		
+		EntityIterator it = new EntityIterator(stream, this);
 		packageName = it.packageName;
 		versionCode = it.versionCode;
 		versionName = it.versionName;
@@ -205,7 +222,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 
 		metadata.set(packageName, versionName, versionCode, databaseVersion);
 
-		logger.log(Level.FINER, "Loading file {0}", file.getAbsolutePath());
+		logger.log(Level.FINER, "Loading file {0}", fileName);
 		logger.log(Level.FINER, "\tpackage: {0}",packageName);
 		logger.log(Level.FINER, "\tversionCode: {0}", versionCode);
 		logger.log(Level.FINER, "\tversionName: {0}",versionName);
@@ -249,7 +266,9 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 				nextIdMap.put(type, i+1);
 			}
 		}
-		
+
+		idMap.put(rootCategory.getType()+rootCategory.getId(), rootCategory);
+
 		for (Entity entity: idMap.values()){			
 			String fingerPrint = entity.getFingerPrint();
 			if (TYPE_TRANSACTIONS.equals(entity.getType()) && fingerPrintMap.get(fingerPrint)!=null){
@@ -264,7 +283,9 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 			fingerPrintMap.put(fingerPrint, entity);
 			updateReferenceCounters(entity, 1);
 		}
-		logger.log(Level.FINER, "Loaded file {0}", file.getAbsolutePath());
+		// add root category
+		fingerPrintMap.put(rootCategory.getFingerPrint(), rootCategory);
+		logger.log(Level.FINER, "Loaded file {0}", fileName);
 	}
 		
 	
@@ -322,6 +343,9 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 	private void writeBody(BufferedWriter bw) throws IOException{		
 		for (Map.Entry<String, Entity> me: idMap.entrySet()){
 			Entity entity = me.getValue();
+			if (entity==rootCategory && metadata.getVersion()>=VERSION_213){
+				continue;
+			}
 			Iterator<String> it = entity.keys();
 			while (it.hasNext()){
 				String key = it.next();
@@ -417,7 +441,7 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 			logger.log(Level.WARNING, "Error while detecting deleted entities ", e);
 		}
 		
-		metadata.setParents(new String[]{file.getName(), backupFile.getFile().getName()});
+		metadata.setParents(new String[]{fileName, backupFile.getFileName()});
 	}
 	
 	/** 
@@ -523,10 +547,46 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		}
 		return add(clone);
 	}
-	
-	
-	
-	
+
+	@Override
+	public void update(EntityManager otherFile){
+		if (otherFile instanceof BackupFile){
+			checkVersion(
+					((BackupFile)otherFile).packageName,
+					((BackupFile)otherFile).versionCode,
+					((BackupFile)otherFile).versionName,
+					((BackupFile)otherFile).databaseVersion
+			);
+		}
+
+		for (Entity entity: otherFile.added()){
+			this.add(entity);
+		}
+
+		remove(otherFile.deleted());
+	}
+
+	@Override
+	public int remove(Collection<Entity> entities){
+		ArrayList<Entity> toDelete = new ArrayList<Entity>(entities);
+		int count = toDelete.size();
+		boolean deleted = true;
+		while (deleted && !toDelete.isEmpty()){
+			deleted = false;
+			Iterator<Entity> it = toDelete.iterator();
+			while(it.hasNext()){
+				if (remove(it.next())!=null){
+					deleted = true;
+					it.remove();
+				}
+			}
+		}
+		for (Entity e: toDelete){
+			logger.log(Level.FINE, "Entity {0} is not deleted, because it is used", e);
+		}
+		return count - toDelete.size();
+	}
+
 	public Entity remove(Entity entity){
 		return remove(entity, true);
 	}
@@ -572,25 +632,27 @@ public class BackupFile implements EntityManager, Iterable<Entity>{
 		return metadata;
 	}
 	
-	protected BackupFile getPreviousBackupFile() {
+	public BackupFile getPreviousBackupFile() {
 		if (previousBackupFile==null){
-			String previousFileName = System.getProperty(this.getClass().getName()+".referenceFile");
-			if (previousFileName==null){
-				previousFileName = metadata.getFileName();
-			}
-			if (previousFileName!=null){
+			String previousFileName = metadata.getFileName();
+			if (previousFileName!=null && file!=null){
 				File previousFile = new File(file.getParentFile(), previousFileName);
 				if (previousFile.exists() && previousFile.canRead()){
 					try {
 						previousBackupFile = new BackupFile(previousFile, getMetaData().getVersion()< VERSION_213);
 					} catch (Exception e) {
-						logger.log(Level.FINE, "Failed to load previous backup file of "+file.getAbsolutePath()+" ", e);
+						logger.log(Level.FINE, "Failed to load previous backup file of "+fileName+" ", e);
 					}
 				}
 			}
 		}
 		return previousBackupFile;
 	}
+
+	public void setPreviousBackupFile(BackupFile previousBackupFile) {
+		this.previousBackupFile = previousBackupFile;
+	}
+
 	public String getPackageName() {
 		return packageName;
 	}

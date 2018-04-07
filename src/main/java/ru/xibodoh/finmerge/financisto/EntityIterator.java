@@ -7,11 +7,7 @@
 */
 package ru.xibodoh.finmerge.financisto;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.Iterator;
 import java.util.zip.GZIPInputStream;
 
@@ -31,11 +27,11 @@ class EntityIterator implements Iterator<Entity>{
 		public final String versionName;
 		public final String databaseVersion;
 		
-		EntityIterator(File file, EntityManager entityManager) throws IOException, IndexOutOfBoundsException{
+		EntityIterator(InputStream inputStream, EntityManager entityManager) throws IOException, IndexOutOfBoundsException{
 //			this.entityName = entityName;
 //			try {
 				this.entityManager = entityManager;
-				GZIPInputStream zin = new GZIPInputStream(new FileInputStream(file));
+				GZIPInputStream zin = new GZIPInputStream(inputStream);
 				reader = new BufferedReader(new InputStreamReader(zin, "UTF-8"));
 				
 				String packageLine = reader.readLine();
@@ -64,8 +60,7 @@ class EntityIterator implements Iterator<Entity>{
 				try {
 					reader.close();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					throw new RuntimeException(e);
 				}
 			}			
 			return result; //!"#END".equals(nextLine);
@@ -95,10 +90,8 @@ class EntityIterator implements Iterator<Entity>{
 				nextLine = reader.readLine();
 				return entity;
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				throw new RuntimeException(e);
 			}
-			return null;
 		}
 	
 		public void remove() {
